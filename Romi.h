@@ -4,18 +4,13 @@
 #include "nonBlockingMillis.h"
 
 #define GO_HANDLE(x) { currentState = x; }
-
-/* Implemented Tasks */
-void lineSensingTask(void);
-void readMotorSpeedTask(void);
-
-/* Define all used instances */
-taskInsert lineSensingIns(lineSensingTask, 50);
-taskInsert readMotorSpeedIns(readMotorSpeedTask, 50);
+#define LINE_TRESHHOLD 500
 
 enum event_states {
   IDLE_STATE,
   READ_LINE_SENSOR,
+  OFF_LINE_STATE,
+  ON_LINE_STATE,
   READ_MOTOR_SPEED,
   ADJUST_MOTOR_SPEED,
 };
