@@ -1,6 +1,6 @@
 #include "Arduino.h"
-#include "bsp.h"
-#include "lineSensor.hpp"
+#include "C:\Users\Furkan\Desktop\Bristol\RoboticsSystem\RoboticsSystemRomi\Romi\inc\bsp.h"
+#include "C:\Users\Furkan\Desktop\Bristol\RoboticsSystem\RoboticsSystemRomi\Romi\inc\lineSensor.hpp"
 
 volatile int counter = 0;
 volatile int aState;
@@ -32,11 +32,26 @@ void encoderInterrupt() {
   aLastState = aState; // Updates the previous state of the outputA with the current state
 }
 
+float readMotorSpeedTask(void) {
+    /* In this task we are getting our current
+       motor speed.
+    */
+    static unsigned long mSpeed_last_timestamp = millis();
+    static int last_counted_val = 0;
+    unsigned long mSpeed_time_now = millis();
+
+    float counterDiff = counter - last_counted_val;
+    float velocity = counterDiff / (float)(mSpeed_time_now - mSpeed_last_timestamp);
+    velocity = MAX_MOTOR_POWER * velocity;
+    last_counted_val = counter;
+    mSpeed_last_timestamp = millis();
+    return velocity;
+}
 
 void smartMotorControl(int r_motor_speed, int l_motor_speed)
 {
   if (abs(r_motor_speed) > 255 || abs(l_motor_speed) > 255) {
-    Serial.print("non-valid values have entered!");
+    Serial.print("non-valid values have been entered!");
     return;
   }
   if ( (r_motor_speed > 0) && (l_motor_speed > 0)) {

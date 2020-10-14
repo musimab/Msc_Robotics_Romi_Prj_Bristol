@@ -1,62 +1,64 @@
-/* ROMI PROJECT  
+/* ROMI PROJECT
    University Of Bristol
    Robotics System
    Furkan Cam
 */
 
-#include "bsp.h"
-#include "Romi.h"
-#include "lineSensor.hpp"
+#include "inc/bsp.h"
+#include "inc/Romi.h"
+#include "inc/lineSensor.hpp"
+#include "inc/pidLib.h"
 
 /* we have created with default pins */
 lineSensor<uint8_t> lineSensorIns;
 sensorMotorPowers sMPower;
-
-volatile float velocity = 0.0;
-
-uint8_t currentState = IDLE_STATE;
+PID pidForLineFollowing(0, 0, 0);
+PID pidForDriving(0, 0, 0);
+uint8_t currentState;
 
 /* Implemented Tasks */
-void lineSensingTask(void);
-void readMotorSpeedTask(void);
 
 /* Define all used instances for
    non-blocking millis functions */
+void lineSensingTask(void);
 taskInsert lineSensingTaskIns(lineSensingTask, 20);
-taskInsert readMotorSpeedTaskIns(readMotorSpeedTask, 50);
+
+void offLineStateTask(void);
+taskInsert offLineStateTaskIns(offLineStateTask, 20);
 
 void lineSensingTask(void) {
   /* if the obtained values are higher than
      the determined threshold, we are on line
-     and we should implement our motor speed 
-     according to this situation. 
-     */
-  if (lineSensorIns.onLine(LINE_TRESHHOLD))
+     and we should implement our motor speed
+     according to this situation.
+  */
+  if (lineSensorIns.isOnLine()) {
+    if (lineSensorIns.isLeftOnline() || lineSensorIns.isRightOnline()) {
+      //if our robot on the right or left of the line, set it on the midst
+      lineSensorIns.calculateMotorSpeed(sMPower);
+      smartMotorControl((int)sMPower.left_motor_power, (int)sMPower.right_motor_power);
+    } else {
+      //Follow the line with smooth motor speed
+      float motor_speed = pidForLineFollowing.updateValue(50, readMotorSpeedTask());
+      smartMotorControl(motor_speed, motor_speed);
+    }
     GO_HANDLE(ON_LINE_STATE);
-  GO_HANDLE(OFF_LINE_STATE);
+  } else {
+    GO_HANDLE(OFF_LINE_STATE);
+  }
 }
 
-void readMotorSpeedTask(void) {
-  /* In this task we are getting our current
-     motor speed.
-     */
-  static int lastCountedVal = 0;
-  float counterDiff = counter - lastCountedVal;
-  velocity = counterDiff / (float)readMotorSpeedTaskIns.getElapsedTime();
-
-  lastCountedVal = counter;
-}
-
-void onLineState(void) {
-  lineSensorIns.calculateMotorSpeed(sMPower);
-
-  smartMotorControl((int)sMPower.left_motor_power, (int)sMPower.right_motor_power);
-
+void offLineStateTask() {
+    float motor_speed = pidForDriving.updateValue(50, readMotorSpeedTask());
+    smartMotorControl(motor_speed, motor_speed);
 }
 
 void setup() {
   bsp_ctor();
   aLastState = digitalRead(outputA);
+  lineSensorIns.setTreshold(LINE_TRESHOLD);
+  pidForLineFollowing.reset();
+  pidForDriving.reset();
   GO_HANDLE(IDLE_STATE); // start with handling IDLE state
 }
 
@@ -66,37 +68,26 @@ void loop() {
 
     case IDLE_STATE: {
 
-        GO_HANDLE(READ_LINE_SENSOR);
-        break;
-      }
-
-    case READ_LINE_SENSOR: {
-        /* is there any line detected ?
-           call lineSensingTask func in 20ms freq
-        */
-        lineSensingTaskIns.callMyTask(); 
+        GO_HANDLE(ON_LINE_STATE);
         break;
       }
 
     case READ_MOTOR_SPEED: {
 
-        if (readMotorSpeedTaskIns.callMyTask()) {
-          GO_HANDLE(IDLE_STATE);
-        }
+
         break;
       }
 
     case ON_LINE_STATE: {
 
-        onLineState();
-    
+        lineSensingTaskIns.callMyTask();
+
         GO_HANDLE(IDLE_STATE);
         break;
       }
 
     case OFF_LINE_STATE: {
-
-        GO_HANDLE(IDLE_STATE);
+        Serial.println(readMotorSpeedTask());
         break;
       }
 

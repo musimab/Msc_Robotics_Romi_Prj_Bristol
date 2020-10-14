@@ -7,6 +7,8 @@
 #define R_PWM_PIN  9
 #define R_DIR_PIN 15
 
+#define MAX_MOTOR_POWER 255
+
 #define LED_1 6
 #define LED_2 7
 #define LED_3 8
@@ -77,6 +79,8 @@ void motorControl(uint8_t command , MSpeed motorSpeed)
 
   }
 }
+
+float readMotorSpeedTask(void);
 void smartMotorControl(int r_motor_speed, int l_motor_speed);
 void bsp_ctor(void);
 void encoderInterrupt();

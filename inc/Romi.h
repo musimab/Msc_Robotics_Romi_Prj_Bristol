@@ -4,7 +4,6 @@
 #include "nonBlockingMillis.h"
 
 #define GO_HANDLE(x) { currentState = x; }
-#define LINE_TRESHHOLD 500
 
 enum event_states {
   IDLE_STATE,
