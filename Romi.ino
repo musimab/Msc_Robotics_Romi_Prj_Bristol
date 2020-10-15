@@ -36,7 +36,10 @@ void lineSensingTask(void) {
     if (lineSensorIns.isLeftOnline() || lineSensorIns.isRightOnline()) {
       //if our robot on the right or left of the line, set it on the midst
       lineSensorIns.calculateMotorSpeed(sMPower);
-      smartMotorControl((int)sMPower.left_motor_power, (int)sMPower.right_motor_power);
+      //we have to saperate the who wheels' encoder rate each other
+      smartMotorControl(pidForLineFollowing.updateValue((int)sMPower.left_motor_power, readMotorSpeedTask()),
+                        pidForLineFollowing.updateValue((int)sMPower.right_motor_power, readMotorSpeedTask()));
+
     } else {
       //Follow the line with smooth motor speed
       float motor_speed = pidForLineFollowing.updateValue(50, readMotorSpeedTask());
@@ -49,8 +52,8 @@ void lineSensingTask(void) {
 }
 
 void offLineStateTask() {
-    float motor_speed = pidForDriving.updateValue(50, readMotorSpeedTask());
-    smartMotorControl(motor_speed, motor_speed);
+  float motor_speed = pidForDriving.updateValue(50, readMotorSpeedTask());
+  smartMotorControl(motor_speed, motor_speed);
 }
 
 void setup() {
@@ -67,27 +70,39 @@ void loop() {
   switch (currentState) {
 
     case IDLE_STATE: {
-
-        GO_HANDLE(ON_LINE_STATE);
+        GO_HANDLE(READ_LINE_SENSOR);
         break;
       }
 
-    case READ_MOTOR_SPEED: {
-
-
+    case READ_LINE_SENSOR: {
+        if (lineSensorIns.isOnLine()) {
+          /* we have to know is the robot on line or just  
+          entiring a line from the right side, if so we 
+          should turn robot right first */
+          if (!nonBlockingDelay(1000)) {
+            // wait for 1 seccond
+            // give a sound with buzzer
+            motorControl<uint8_t>(STOP_MOTORS, 0);
+            GO_HANDLE(IDLE_STATE);
+          } else {
+            GO_HANDLE(ON_LINE_STATE);
+          }
+        } else {
+          GO_HANDLE(OFF_LINE_STATE);
+        }
         break;
       }
 
     case ON_LINE_STATE: {
-
         lineSensingTaskIns.callMyTask();
-
-        GO_HANDLE(IDLE_STATE);
+        GO_HANDLE(ON_LINE_STATE);
         break;
       }
 
     case OFF_LINE_STATE: {
-        Serial.println(readMotorSpeedTask());
+        motorControl<uint8_t>(MOVE_FORWARD, pidForDriving.
+                              updateValue(50, readMotorSpeedTask()));
+        GO_HANDLE(IDLE_STATE);
         break;
       }
 

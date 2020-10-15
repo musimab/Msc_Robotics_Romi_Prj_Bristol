@@ -1,6 +1,6 @@
 #include "Arduino.h"
-#include "C:\Users\Furkan\Desktop\Bristol\RoboticsSystem\RoboticsSystemRomi\Romi\inc\bsp.h"
-#include "C:\Users\Furkan\Desktop\Bristol\RoboticsSystem\RoboticsSystemRomi\Romi\inc\lineSensor.hpp"
+#include "..\inc\bsp.h"
+#include "..\inc\lineSensor.hpp"
 
 volatile int counter = 0;
 volatile int aState;
@@ -30,6 +30,28 @@ void encoderInterrupt() {
     //Serial.println(counter);
   }
   aLastState = aState; // Updates the previous state of the outputA with the current state
+}
+
+boolean nonBlockingDelay(unsigned long dly) {
+
+    static unsigned long delay_last_timestamp = millis();
+    static boolean isEnteredFirst = true;
+
+    if (isEnteredFirst) {
+        delay_last_timestamp = millis();
+        isEnteredFirst = false;
+    }
+    
+    unsigned long delay_time_now = millis();
+    if ((delay_time_now - delay_last_timestamp) > dly)
+    {
+        isEnteredFirst = true;
+        return true;
+    }
+    else {
+        return false;
+    }
+    
 }
 
 float readMotorSpeedTask(void) {

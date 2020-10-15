@@ -5,8 +5,9 @@
 
 #define GO_HANDLE(x) { currentState = x; }
 
-enum event_states {
+enum ROMI_TASKS {
   IDLE_STATE,
+  FIND_LINE,
   READ_LINE_SENSOR,
   OFF_LINE_STATE,
   ON_LINE_STATE,

@@ -80,6 +80,7 @@ void motorControl(uint8_t command , MSpeed motorSpeed)
   }
 }
 
+boolean nonBlockingDelay(unsigned long dly);
 float readMotorSpeedTask(void);
 void smartMotorControl(int r_motor_speed, int l_motor_speed);
 void bsp_ctor(void);
