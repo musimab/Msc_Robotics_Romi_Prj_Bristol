@@ -14,7 +14,9 @@ lineSensor<uint8_t> lineSensorIns;
 sensorMotorPowers sMPower;
 PID pidForLineFollowing(0, 0, 0);
 PID pidForDriving(0, 0, 0);
-uint8_t currentState;
+uint8_t current_state;
+uint8_t next_state = IDLE_STATE;
+uint32_t blocking_time {0};
 
 /* Implemented Tasks */
 
@@ -67,26 +69,25 @@ void setup() {
 
 void loop() {
   taskInsert::executeTasks();
-  switch (currentState) {
+  switch (current_state) {
 
     case IDLE_STATE: {
+
         GO_HANDLE(READ_LINE_SENSOR);
         break;
       }
 
     case READ_LINE_SENSOR: {
+        motorControl<uint8_t>(STOP_MOTORS, 0);
         if (lineSensorIns.isOnLine()) {
-          /* we have to know is the robot on line or just  
-          entiring a line from the right side, if so we 
-          should turn robot right first */
-          if (!nonBlockingDelay(1000)) {
-            // wait for 1 seccond
-            // give a sound with buzzer
-            motorControl<uint8_t>(STOP_MOTORS, 0);
-            GO_HANDLE(IDLE_STATE);
-          } else {
-            GO_HANDLE(ON_LINE_STATE);
-          }
+          /* we have to know is the robot on line or just
+            entiring a line from the right side, if so we
+            should turn robot right first */
+          // wait for 1 seccond
+          // give a sound with buzzer
+          
+          // non blocking wait 1000 ms and then go ON_LINE_STATE
+          NON_BLOCKING_DELAY(ON_LINE_STATE, 1000);
         } else {
           GO_HANDLE(OFF_LINE_STATE);
         }
@@ -109,6 +110,15 @@ void loop() {
     case ADJUST_MOTOR_SPEED: {
 
         GO_HANDLE(IDLE_STATE);
+        break;
+      }
+
+    case NON_BLOCKING_DELAY_STATE: {
+        if (!nonBlockingDelay(blocking_time)) {
+          GO_HANDLE(IDLE_STATE);
+        } else {
+          GO_HANDLE(next_state);
+        }
         break;
       }
 

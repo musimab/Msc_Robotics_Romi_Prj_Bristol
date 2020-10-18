@@ -7,9 +7,17 @@ unsigned long taskInsert::time_now = 0;
    this function should be used */
 
 bool taskInsert::callMyTask(void) {
+  static boolean isEnteredFirst = true;
   elapsed_time = time_now - last_timestamp;
+  
+  if(isEnteredFirst){
+  	last_timestamp = millis();
+  	isEnteredFirst = false;
+  }
+  
   if (elapsed_time > freqOfTask)
   {
+  	isEnteredFirst = true;
     last_timestamp = millis();
     myTaskFunc();
     // inform the user that the task has been implemented
