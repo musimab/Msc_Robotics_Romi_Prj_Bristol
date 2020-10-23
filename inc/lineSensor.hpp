@@ -3,11 +3,11 @@
 
 #include "bsp.h"
 
-#define LINE_TRESHOLD 500
+#define LINE_TRESHOLD 200
 
-#define LINE_LEFT_PIN A2
+#define LINE_LEFT_PIN A4
 #define LINE_CENTRE_PIN A3
-#define LINE_RIGHT_PIN A4
+#define LINE_RIGHT_PIN A2
 
 struct sensorMotorPowers {
   float left_motor_power;
@@ -36,9 +36,9 @@ class lineSensor {
 
     // default Constructor
     lineSensor() {
-      S_Pin left_pin = LINE_LEFT_PIN;
-      S_Pin centre_pin = LINE_CENTRE_PIN;
-      S_Pin right_pin = LINE_RIGHT_PIN;
+      left_pin = LINE_LEFT_PIN;
+      centre_pin = LINE_CENTRE_PIN;
+      right_pin = LINE_RIGHT_PIN;
 
       pinMode( LINE_LEFT_PIN, INPUT );
       pinMode( LINE_CENTRE_PIN, INPUT );
@@ -58,11 +58,12 @@ class lineSensor {
     */
     void calibrate(uint16_t cal_rate = 50) {
       float l_value{0}, c_value {0}, r_value {0};
-
-      for (uint16_t i = cal_rate; i >= 0; i--) {
+	  Serial.println("calibrating");
+      for (int i = cal_rate; i >= 0; i--) {
         l_value += analogRead(left_pin);
         c_value += analogRead(centre_pin);
         r_value += analogRead(right_pin);
+        Serial.print(".");
       }
       cal_l_value = l_value / (float)cal_rate;
       cal_c_value = c_value / (float)cal_rate;
@@ -94,7 +95,7 @@ class lineSensor {
     void calculateMotorSpeed(sensorMotorPowers & myPowers) {
       readCalibratedLineVals();
       float total_val = left_sensor_val + centre_sensor_val + right_sensor_val;
-      myPowers.left_motor_power  = MAX_MOTOR_POWER * ((left_sensor_val - right_sensor_val) / total_val);
+      myPowers.left_motor_power  = MAX_MOTOR_SPEED * ((left_sensor_val - right_sensor_val) / total_val);
       myPowers.right_motor_power = -myPowers.left_motor_power;
     }
 

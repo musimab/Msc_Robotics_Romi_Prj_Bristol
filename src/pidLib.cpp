@@ -1,7 +1,7 @@
 
 #include "Arduino.h"
 #include "C:\Users\Furkan\Desktop\Bristol\RoboticsSystem\RoboticsSystemRomi\Romi\inc\pidLib.h"
-
+#include "..\inc\bsp.h"
 
 /*
    Class constructor
@@ -55,10 +55,17 @@ float PID::updateValue(float demand, float measurement) {
 
 	float error = measurement - demand;
 	float err_diff = error - last_error;
-	last_error = error;
-
+	
 	integral_error += error;
 
+	if(measurement > 100)
+	   return 0.0;
+	   
+	if (integral_error > 100)
+    	integral_error = 100;
+  	else if (integral_error < -100)
+    	integral_error = -100;
+    	
 	//Calculate P,I,D Term contributions.
 	Kp_output = Kp * error;
 	Kd_output = Kd * err_diff; 
@@ -68,6 +75,12 @@ float PID::updateValue(float demand, float measurement) {
 	//output signal -> total pid output value
 	output_signal = Kp_output + Kd_output + Ki_output;
 
+	if(output_signal > 125)
+	   output_signal = 125;
+	else if(output_signal < -125)
+		output_signal = -125;
+
+	last_error = error;
 	// Pass the result back.
 	return output_signal;
 }
