@@ -17,7 +17,7 @@
 #define KI_VAL 1 // minimise the total error 
 #define KD_VAL 1   // if there is a huge changing
 
-#define M_SPEED 10
+#define M_SPEED 15
 
 /* Motor instances */
 myMotor<uint8_t> leftMotorInstance(L_DIR_PIN, L_PWM_PIN);
@@ -43,7 +43,10 @@ void lineSensingTask(void);
 taskInsert lineSensingTaskIns(lineSensingTask, 20);
 
 void offLineStateTask(void);
-taskInsert offLineStateTaskIns(offLineStateTask, 20);
+taskInsert offLineStateTaskIns(offLineStateTask, 15);
+
+// start Romi from origin point
+kinematics knm(0, 0);
 
 void lineSensingTask(void) {
   /* if the obtained values are higher than
@@ -71,6 +74,13 @@ void lineSensingTask(void) {
 }
 
 void offLineStateTask() {
+
+  /*if( knm.get_angle() > 0.2) {
+    left_motor_speed -= 1;
+    } else {
+    left_motor_speed += 1;
+    }*/
+
   leftMotorInstance.motorControl(pidForLeft.updateValue(left_motor_speed, leftMotorInstance.readMotorSpeed(&count_e0)));
   rightMotorInstance.motorControl(pidForRight.updateValue(right_motor_speed, rightMotorInstance.readMotorSpeed(&count_e1)));
 }
@@ -83,49 +93,17 @@ void setup() {
   pidForLeft.reset();
   lineSensorIns.calibrate(1000);
   delay(2000);
- 
+
   GO_HANDLE(IDLE_STATE); // start with handling IDLE state
 }
-
-// start Romi from origin point
-kinematics knm(0, 0);
 
 void loop() {
   taskInsert::executeTasks();
   knm.kinematicupdate(count_e0, count_e1);
   switch (current_state) {
     case IDLE_STATE: {
-        /*
-                lineSensorIns. readLeftCalibratedLineVal();
-                lineSensorIns. readRightCalibratedLineVal();
-                lineSensorIns. readCentreCalibratedLineVal();
-                Serial.print(lineSensorIns.right_sensor_val);
-                Serial.print( ", " );
-                Serial.print(lineSensorIns.centre_sensor_val);
-                Serial.print( ", " );
-                Serial.println(lineSensorIns.left_sensor_val);
-        */
-        //knm.kinematicupdate(count_e0,count_e1);
-        //Serial.println(knm.get_angle(count_e0,count_e1));
-        /*Serial.print("encoder 0: ");
-          Serial.print(count_e0);
-          Serial.print(" - encoder 1: ");
-          Serial.println(count_e1);*/
-          float getval = knm.get_angle();
-          if (getval < 90) {
-            left_motor_speed = M_SPEED;
-            right_motor_speed = -M_SPEED;
-            offLineStateTaskIns.callMyTask();
-          } else {
-            leftMotorInstance.motorControl(0);
-            rightMotorInstance.motorControl(0);
-          }
 
-
-         // Serial.println(getval);
-
-        knm.printVals();
-        GO_HANDLE(IDLE_STATE);
+        GO_HANDLE(READ_LINE_SENSOR);
         break;
       }
 
@@ -135,10 +113,13 @@ void loop() {
             entiring a line from the right side, if so we
             should turn robot right first */
           // give a sound with buzzer
-
+          Serial.println("online!!!");
+          knm.resetDistanceFrom();
           GO_HANDLE(ON_LINE_STATE);
         } else {
-          GO_HANDLE(OFF_LINE_STATE);
+          left_motor_speed = M_SPEED;
+          right_motor_speed = M_SPEED;
+          offLineStateTaskIns.callMyTask();
         }
         break;
       }
@@ -148,10 +129,12 @@ void loop() {
         {
           GO_HANDLE(ON_LINE_STATE);
         } else {
-          leftMotorInstance.motorControl(0);
-          rightMotorInstance.motorControl(0);
-          WAIT_NONBLOCKING_SANE_MS(1500, ON_LINE_STATE);
-          GO_HANDLE(FIND_LINE);
+          Serial.println("offline!!!");
+          if (knm.getDistanceFrom() > 12.5) {
+            leftMotorInstance.motorControl(0);
+            rightMotorInstance.motorControl(0);
+            GO_HANDLE(FIND_LINE);
+          }
         }
         //lineSensingTaskIns.callMyTask();
 
@@ -159,11 +142,26 @@ void loop() {
       }
 
     case FIND_LINE: {
-        left_motor_speed = M_SPEED;
-        right_motor_speed = -M_SPEED;
-        offLineStateTaskIns.callMyTask();
-        WAIT_NONBLOCKING_SANE_MS(1500, FIND_LINE);
-        GO_HANDLE(STOP_MOTOR_STATE);
+        WAIT_NONBLOCKING_SANE_MS(1400, FIND_LINE);
+        GO_HANDLE(JOIN_LINE);
+
+        break;
+      }
+      
+    case JOIN_LINE: {
+        knm.printVals();
+        if (knm.get_angle() < 90) {
+          left_motor_speed = M_SPEED;
+          right_motor_speed = -M_SPEED;
+          offLineStateTaskIns.callMyTask();
+          GO_HANDLE(FIND_LINE);
+        } else {
+          // Follow the line
+          leftMotorInstance.motorControl(0);
+          rightMotorInstance.motorControl(0);
+          GO_HANDLE(STOP_MOTOR_STATE);
+        }
+        GO_HANDLE(JOIN_LINE);
         break;
       }
 

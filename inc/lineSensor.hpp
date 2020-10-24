@@ -3,7 +3,7 @@
 
 #include "bsp.h"
 
-#define LINE_TRESHOLD 200
+#define LINE_TRESHOLD 150
 
 #define LINE_LEFT_PIN A4
 #define LINE_CENTRE_PIN A3

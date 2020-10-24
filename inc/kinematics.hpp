@@ -23,6 +23,7 @@ class kinematics {
 	float angle_change{0};
     long last_enc0 {0}, last_enc1 {0}, enc_change0 {0}, enc_change1 {0};
 	float distance {0}, angle{0}, last_distance{0}, last_angle{0};
+	float dis_diff {0}, distanceFrom{0};
   public:
     // What variables do you need?
     // What is the appropriate type?
@@ -44,6 +45,15 @@ class kinematics {
       	return (angle);
 	}
     
+    void resetDistanceFrom() {
+    	distanceFrom = 0;
+	}
+    
+    float getDistanceFrom() {
+     distanceFrom += dis_diff;
+     return distanceFrom;
+	}
+    
     void printVals() {
     	Serial.print("distance: "); Serial.print(distance);
     	Serial.print(" angle: "); Serial.print(angle);
@@ -56,10 +66,12 @@ class kinematics {
       float count_diff_e1 = encoder_c1 - last_enc1;
       
       distance += MM_PER_COUNT * (count_diff_e0 + count_diff_e1) /2.0;
-      angle += (0.1486 /*+ ANGLE_ERROR*/) * ((count_diff_e0 - count_diff_e1) /2.0) ; 
-
-      Ynew += (distance-last_distance) * sin(DEG_TO_RAD(angle));
-      Xnew += (distance-last_distance) * cos(DEG_TO_RAD(angle));
+      angle += (0.1486 ) * ((count_diff_e0 - count_diff_e1) /2.0) ; 
+		
+	  dis_diff = distance-last_distance;	
+	  
+      Ynew += (dis_diff) * sin(DEG_TO_RAD(angle));
+      Xnew += (dis_diff) * cos(DEG_TO_RAD(angle));
 
       // update last encoder values with new ones
       last_enc0 = encoder_c0;
