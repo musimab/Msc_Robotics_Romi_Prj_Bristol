@@ -47,16 +47,16 @@ public:
 		}
 	}
 	
-	float readMotorSpeed(int encoder_counter) {
+	float readMotorSpeed(const long * const encoder_counter) {
     /* In this task we are getting our current
        motor speed.
     */
     unsigned long mSpeed_time_now = millis();
 
-    float counterDiff = encoder_counter - last_counted_val;
+    float counterDiff = *encoder_counter - last_counted_val;
     float velocity = counterDiff / (float)(mSpeed_time_now - mSpeed_last_timestamp);
     velocity = MAX_MOTOR_SPEED * velocity / 3.0 /* 3.0 max speed for 100 */;
-    last_counted_val = encoder_counter;
+    last_counted_val = *encoder_counter;
     mSpeed_last_timestamp = millis();
     return velocity;
 	}

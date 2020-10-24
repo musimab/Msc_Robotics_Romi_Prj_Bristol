@@ -1,7 +1,7 @@
- /* ROMI PROJECT
-   University Of Bristol
-   Robotics System
-   Furkan Cam
+/* ROMI PROJECT
+  University Of Bristol
+  Robotics System
+  Furkan Cam
 */
 
 #include "inc/bsp.h"
@@ -17,7 +17,7 @@
 #define KI_VAL 1 // minimise the total error 
 #define KD_VAL 1   // if there is a huge changing
 
-#define M_SPEED 15
+#define M_SPEED 10
 
 /* Motor instances */
 myMotor<uint8_t> leftMotorInstance(L_DIR_PIN, L_PWM_PIN);
@@ -33,8 +33,8 @@ uint8_t current_state;
 uint8_t next_state = IDLE_STATE;
 uint32_t blocking_time {0};
 
-int left_motor_speed {15};
-int right_motor_speed {15};
+int left_motor_speed {M_SPEED};
+int right_motor_speed {M_SPEED};
 /* Implemented Tasks */
 
 /* Define all used instances for
@@ -61,7 +61,7 @@ void lineSensingTask(void) {
 
     } else {
       //Follow the line with smooth motor speed
-      float motor_speed = pidForLineFollowing.updateValue(50, 1/*readMotorSpeedTask()*/);
+      //float motor_speed = pidForLineFollowing.updateValue(50, 1/*readMotorSpeedTask()*/);
       //smartMotorControl(motor_speed, motor_speed);
     }
     GO_HANDLE(ON_LINE_STATE);
@@ -71,8 +71,8 @@ void lineSensingTask(void) {
 }
 
 void offLineStateTask() {
-  leftMotorInstance.motorControl(pidForLeft.updateValue(left_motor_speed, leftMotorInstance.readMotorSpeed(count_e0)));
-  rightMotorInstance.motorControl(pidForRight.updateValue(right_motor_speed, rightMotorInstance.readMotorSpeed(count_e1)));
+  leftMotorInstance.motorControl(pidForLeft.updateValue(left_motor_speed, leftMotorInstance.readMotorSpeed(&count_e0)));
+  rightMotorInstance.motorControl(pidForRight.updateValue(right_motor_speed, rightMotorInstance.readMotorSpeed(&count_e1)));
 }
 
 void setup() {
@@ -82,15 +82,18 @@ void setup() {
   pidForRight.reset();
   pidForLeft.reset();
   lineSensorIns.calibrate(1000);
+  delay(2000);
+ 
   GO_HANDLE(IDLE_STATE); // start with handling IDLE state
 }
 
-kinematics knm;
+// start Romi from origin point
+kinematics knm(0, 0);
 
 void loop() {
   taskInsert::executeTasks();
+  knm.kinematicupdate(count_e0, count_e1);
   switch (current_state) {
-
     case IDLE_STATE: {
         /*
                 lineSensorIns. readLeftCalibratedLineVal();
@@ -104,10 +107,24 @@ void loop() {
         */
         //knm.kinematicupdate(count_e0,count_e1);
         //Serial.println(knm.get_angle(count_e0,count_e1));
-        Serial.print("encoder 0: ");
-        Serial.print(count_e0);
-        Serial.print(" - encoder 1: ");
-        Serial.println(count_e1);
+        /*Serial.print("encoder 0: ");
+          Serial.print(count_e0);
+          Serial.print(" - encoder 1: ");
+          Serial.println(count_e1);*/
+          float getval = knm.get_angle();
+          if (getval < 90) {
+            left_motor_speed = M_SPEED;
+            right_motor_speed = -M_SPEED;
+            offLineStateTaskIns.callMyTask();
+          } else {
+            leftMotorInstance.motorControl(0);
+            rightMotorInstance.motorControl(0);
+          }
+
+
+         // Serial.println(getval);
+
+        knm.printVals();
         GO_HANDLE(IDLE_STATE);
         break;
       }
