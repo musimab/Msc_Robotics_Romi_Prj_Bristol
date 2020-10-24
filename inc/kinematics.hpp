@@ -12,6 +12,7 @@
 #define ANGLE_PER_CNT 0.25
 #define PULSE_FOR_ROMI 8
 #define ANGLE_ERROR   0.0132405 //0.1365
+#define DIS_TO_ANG    0.1486 
 #define ROTATE_VAL(a) a * (1 + ANGLE_ERROR)
 #define DEG_TO_RAD(d) d*DETORA
 
@@ -66,7 +67,7 @@ class kinematics {
       float count_diff_e1 = encoder_c1 - last_enc1;
       
       distance += MM_PER_COUNT * (count_diff_e0 + count_diff_e1) /2.0;
-      angle += (0.1486 ) * ((count_diff_e0 - count_diff_e1) /2.0) ; 
+      angle +=  DIS_TO_ANG * ((count_diff_e0 - count_diff_e1) /2.0) ; 
 		
 	  dis_diff = distance-last_distance;	
 	  

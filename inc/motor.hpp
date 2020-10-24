@@ -60,7 +60,7 @@ public:
     mSpeed_last_timestamp = millis();
     return velocity;
 	}
-	
+
 };
 
 

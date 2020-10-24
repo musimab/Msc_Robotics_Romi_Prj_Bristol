@@ -35,6 +35,7 @@ uint32_t blocking_time {0};
 
 int left_motor_speed {M_SPEED};
 int right_motor_speed {M_SPEED};
+int turning_angle {0};
 /* Implemented Tasks */
 
 /* Define all used instances for
@@ -42,8 +43,8 @@ int right_motor_speed {M_SPEED};
 void lineSensingTask(void);
 taskInsert lineSensingTaskIns(lineSensingTask, 20);
 
-void offLineStateTask(void);
-taskInsert offLineStateTaskIns(offLineStateTask, 15);
+void motorHandleTask(void);
+taskInsert motorHandleTaskIns(motorHandleTask, 15);
 
 // start Romi from origin point
 kinematics knm(0, 0);
@@ -73,7 +74,71 @@ void lineSensingTask(void) {
   }
 }
 
-void offLineStateTask() {
+bool motorTurning(float degree) {
+  static boolean isAngleEnteredFirst = true;
+  static float angle_start_point = 0;
+  float system_angle = knm.get_angle();
+
+  if (isAngleEnteredFirst) {
+    isAngleEnteredFirst = false;
+    angle_start_point = system_angle;
+  }
+
+  float target_angle = angle_start_point + degree;
+
+  if ((degree > 0) && (system_angle > 0)) {
+    if (system_angle < target_angle)
+    {
+      Serial.print("state1 ");
+      left_motor_speed = M_SPEED;
+      right_motor_speed = -M_SPEED;
+      motorHandleTaskIns.callMyTask();
+      return true;
+    } else {
+      isAngleEnteredFirst = true;
+      return false;
+    }
+  } else if ((degree < 0) && (system_angle > 0)) {
+    if (system_angle > target_angle)
+    {
+      Serial.print("state2 ");
+      left_motor_speed = -M_SPEED;
+      right_motor_speed = M_SPEED;
+      motorHandleTaskIns.callMyTask();
+      return true;
+    } else {
+      isAngleEnteredFirst = true;
+      return false;
+    }
+  } else if ((degree > 0) && (system_angle < 0)) {
+    if (system_angle < target_angle)
+    {
+      Serial.print("state3 ");
+      left_motor_speed = M_SPEED;
+      right_motor_speed = -M_SPEED;
+      motorHandleTaskIns.callMyTask();
+      return true;
+    } else {
+      isAngleEnteredFirst = true;
+      return false;
+    }
+
+  } else if ((degree < 0) && (system_angle < 0)) {
+    if (system_angle > target_angle)
+    {
+      Serial.print("state4 ");
+      left_motor_speed = -M_SPEED;
+      right_motor_speed = M_SPEED;
+      motorHandleTaskIns.callMyTask();
+      return true;
+    } else {
+      isAngleEnteredFirst = true;
+      return false;
+    }
+  }
+}
+
+void motorHandleTask() {
 
   /*if( knm.get_angle() > 0.2) {
     left_motor_speed -= 1;
@@ -119,7 +184,7 @@ void loop() {
         } else {
           left_motor_speed = M_SPEED;
           right_motor_speed = M_SPEED;
-          offLineStateTaskIns.callMyTask();
+          motorHandleTaskIns.callMyTask();
         }
         break;
       }
@@ -143,25 +208,39 @@ void loop() {
 
     case FIND_LINE: {
         WAIT_NONBLOCKING_SANE_MS(1400, FIND_LINE);
-        GO_HANDLE(JOIN_LINE);
-
+        turning_angle = 90;
+        GO_HANDLE(TURN_ROMI);
         break;
       }
-      
-    case JOIN_LINE: {
+
+    case TURN_ROMI: {
         knm.printVals();
-        if (knm.get_angle() < 90) {
-          left_motor_speed = M_SPEED;
-          right_motor_speed = -M_SPEED;
-          offLineStateTaskIns.callMyTask();
-          GO_HANDLE(FIND_LINE);
+        if ( motorTurning(turning_angle)) {
+          GO_HANDLE(TURN_ROMI);
         } else {
-          // Follow the line
+          //Check first whether line is continuing
           leftMotorInstance.motorControl(0);
           rightMotorInstance.motorControl(0);
-          GO_HANDLE(STOP_MOTOR_STATE);
+          GO_HANDLE(CHECK_LINE_STATE);
         }
-        GO_HANDLE(JOIN_LINE);
+        break;
+      }
+
+    case CHECK_LINE_STATE: {
+        Serial.println("CHECK_LINE_STATE!!!");
+        if (lineSensorIns.isOnLine()) {
+          knm.resetDistanceFrom();
+          GO_HANDLE(CHECK_LINE_STATE);
+        } else {
+          turning_angle = -90;
+          GO_HANDLE(TURN_ROMI);
+        }
+        break;
+      }
+
+    case FOLLOW_LINE_STATE: {
+        GO_HANDLE(FOLLOW_LINE_STATE);
+
         break;
       }
 
@@ -180,7 +259,7 @@ void loop() {
     case ADJUST_MOTOR_SPEED: {
         left_motor_speed = M_SPEED;
         right_motor_speed = M_SPEED;
-        offLineStateTaskIns.callMyTask();
+        motorHandleTaskIns.callMyTask();
         GO_HANDLE(IDLE_STATE);
         break;
       }
