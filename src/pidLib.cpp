@@ -58,9 +58,6 @@ float PID::updateValue(float demand, float measurement) {
 	
 	integral_error += error;
 
-	if(measurement > 100)
-	   return 0.0;
-	   
 	if (integral_error > 100)
     	integral_error = 100;
   	else if (integral_error < -100)

@@ -30,9 +30,12 @@ public:
 	
 	void motorControl(int motor_power)
 	{
-		if (abs(motor_power) > 100 ) {
+		if (abs(motor_power) > 25 ) {
 			//Serial.print("non-valid values have been entered!");
-			return;
+			if(motor_power < 0)
+				motor_power = -25;
+			else if (motor_power > 0)
+				motor_power = 25;
 		}
 		if (motor_power > 0) {
 			digitalWrite(motor_dir_pin, HIGH);

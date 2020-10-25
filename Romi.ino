@@ -17,7 +17,7 @@
 #define KI_VAL 1 // minimise the total error 
 #define KD_VAL 1   // if there is a huge changing
 
-#define M_SPEED 15
+#define M_SPEED 20
 
 /* Motor instances */
 myMotor<uint8_t> leftMotorInstance(L_DIR_PIN, L_PWM_PIN);
@@ -41,13 +41,18 @@ int turning_angle {0};
 /* Define all used instances for
    non-blocking millis functions */
 void lineSensingTask(void);
-taskInsert lineSensingTaskIns(lineSensingTask, 25);
+taskInsert lineSensingTaskIns(lineSensingTask, 15);
 
 void motorHandleTask(void);
-taskInsert motorHandleTaskIns(motorHandleTask, 35);
+taskInsert motorHandleTaskIns(motorHandleTask, 15);
 
 // start Romi from origin point
 kinematics knm(0, 0);
+
+static float target_angle = {0};
+static float angle_start_point = {0};
+
+uint16_t count_turning {0};
 
 void lineSensingTask(void) {
   /* if the obtained values are higher than
@@ -63,50 +68,6 @@ void lineSensingTask(void) {
     rightMotorInstance.motorControl(pidForRight.updateValue(M_SPEED - sMPower.right_motor_power, rightMotorInstance.readMotorSpeed(&count_e1)) / 5.0);
 
   }
-}
-
-bool motorTurning(float degree) {
-  static boolean isAngleEnteredFirst = true;
-  static float target_angle = 0;
-  static float angle_start_point = 0;
-  float system_angle = knm.get_angle();
-
-  if (isAngleEnteredFirst) {
-    isAngleEnteredFirst = false;
-    angle_start_point = system_angle;
-    target_angle = angle_start_point + degree;
-  }
-
-  Serial.print("angle Start Point: "); Serial.print(angle_start_point);
-  Serial.print(" - target angle: "); Serial.print(target_angle);
-  Serial.print(" - system angle: "); Serial.println(system_angle);
-
-  if (((degree > 0) && (system_angle > 0)) || ((degree > 0) && (system_angle < 0))) {
-    if (system_angle < target_angle)
-    {
-      Serial.println("state1............................ ");
-      left_motor_speed = M_SPEED;
-      right_motor_speed = -M_SPEED;
-    } else {
-      isAngleEnteredFirst = true;
-      return false;
-    }
-  } else if (((degree < 0) && (system_angle > 0)) || ((degree < 0) && (system_angle < 0))) {
-    if (system_angle > target_angle)
-    {
-      Serial.println("state2............................ ");
-      left_motor_speed = -M_SPEED;
-      right_motor_speed = M_SPEED;
-    } else {
-      isAngleEnteredFirst = true;
-      return false;
-    }
-  }
-
-  Serial.print("left Motor speed: "); Serial.print(left_motor_speed);
-  Serial.print(" - right motor speed: "); Serial.print(right_motor_speed);
-  motorHandleTaskIns.callMyTask();
-  return true;
 }
 
 void motorHandleTask() {
@@ -133,6 +94,8 @@ void setup() {
   GO_HANDLE(IDLE_STATE); // start with handling IDLE state
 }
 
+float home_distance = {0};
+
 void loop() {
   taskInsert::executeTasks();
   knm.kinematicupdate(count_e0, count_e1);
@@ -151,7 +114,13 @@ void loop() {
           // give a sound with buzzer
           Serial.println("online!!!");
           knm.resetDistanceFrom();
-          GO_HANDLE(ON_LINE_STATE);
+
+          if (count_turning == 7) {
+            GO_HANDLE(SETTLING_LINE_STATE);
+          }  else {
+            GO_HANDLE(ON_LINE_STATE);
+          }
+
         } else {
           Serial.println("read line else -state");
           left_motor_speed = M_SPEED;
@@ -169,10 +138,14 @@ void loop() {
         } else {
           //Off-line state
           //Let system go beyond the line for the settling
-          if (knm.getDistanceFrom() > 12.5) {
+          if (knm.getDistanceFrom() > 10) {
             leftMotorInstance.motorControl(0);
             rightMotorInstance.motorControl(0);
-            turning_angle = 90;
+            if (count_turning == 10) {
+              turning_angle = -90;
+            } else {
+              turning_angle = 90;
+            }
             GO_HANDLE(FIND_LINE);
           }
         }
@@ -182,31 +155,69 @@ void loop() {
     case FIND_LINE: {
         Serial.println("find line-state");
         WAIT_NONBLOCKING_SANE_MS(500, FIND_LINE);
-        GO_HANDLE(TURN_ROMI);
+        angle_start_point = knm.get_angle();
+        target_angle = angle_start_point + turning_angle;
+        GO_HANDLE(TURN_ROMI_STATE);
         break;
       }
 
-    case TURN_ROMI: {
+    // TURN ROMI STATE
+    case TURN_ROMI_STATE: {
         knm.printVals();
-        if ( motorTurning(turning_angle)) {
-          GO_HANDLE(TURN_ROMI);
-        } else {
-          //Check first whether line is continuing
-          leftMotorInstance.motorControl(0);
-          rightMotorInstance.motorControl(0);
-          GO_HANDLE(CHECK_LINE_STATE);
+        float system_angle = knm.get_angle();
+
+        if (((turning_angle > 0) && (system_angle > 0)) || ((turning_angle > 0) && (system_angle < 0))) {
+          if (system_angle < target_angle)
+          {
+            Serial.println("state1............................ ");
+            left_motor_speed = M_SPEED;
+            right_motor_speed = -M_SPEED;
+          } else {
+            leftMotorInstance.motorControl(0);
+            rightMotorInstance.motorControl(0);
+            count_turning++;
+            BREAK_AND_GO(CHECK_LINE_STATE);
+          }
+        } else if (((turning_angle < 0) && (system_angle > 0)) || ((turning_angle < 0) && (system_angle < 0))) {
+          if (system_angle > target_angle)
+          {
+            Serial.println("state2............................ ");
+            left_motor_speed = -M_SPEED;
+            right_motor_speed = M_SPEED;
+          } else {
+            leftMotorInstance.motorControl(0);
+            rightMotorInstance.motorControl(0);
+            count_turning++;
+            BREAK_AND_GO(CHECK_LINE_STATE);
+          }
         }
+
+        motorHandleTaskIns.callMyTask();
+        GO_HANDLE(TURN_ROMI_STATE);
         break;
       }
 
     case CHECK_LINE_STATE: {
-        Serial.println("CHECK_LINE_STATE!!!");
         if (lineSensorIns.isOnLine()) {
           WAIT_NONBLOCKING_SANE_MS(500, CHECK_LINE_STATE);
           GO_HANDLE(SETTLING_LINE_STATE);
         } else {
-          turning_angle = -90;
-          GO_HANDLE(FIND_LINE);
+          if (count_turning >= 5 && count_turning < 7 || count_turning >= 10) {
+            if (count_turning == 5) {
+              turning_angle = 90;
+              GO_HANDLE(FIND_LINE);
+            } else if (count_turning == 6) {
+              count_turning++;
+              GO_HANDLE(READ_LINE_SENSOR);
+            } else if (count_turning >= 10) {
+              knm.resetDistanceFrom();
+              home_distance = knm.homeDistance();
+              GO_HANDLE(RETURN_HOME);
+            }
+          }  else {
+            turning_angle = -90;
+            GO_HANDLE(FIND_LINE);
+          }
         }
         break;
       }
@@ -235,10 +246,21 @@ void loop() {
         break;
       }
 
-    case OFF_LINE_STATE: {
-        GO_HANDLE(ADJUST_MOTOR_SPEED);
+    case RETURN_HOME : {
+        Serial.print("home Distance: "); Serial.print(home_distance);
+        Serial.print(" - distance from: "); Serial.print(knm.getDistanceFrom());
+        if ((home_distance + 700) > knm.getDistanceFrom()) {
+          left_motor_speed = M_SPEED;
+          right_motor_speed = M_SPEED;
+          motorHandleTaskIns.callMyTask();
+          GO_HANDLE(RETURN_HOME);
+        } else {
+          GO_HANDLE(STOP_MOTOR_STATE);
+        }
+
         break;
       }
+
 
     case STOP_MOTOR_STATE: {
         leftMotorInstance.motorControl(0);

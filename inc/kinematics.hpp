@@ -55,6 +55,10 @@ class kinematics {
      return distanceFrom;
 	}
     
+    float homeDistance () {
+    	return sqrt(Ynew*Ynew + Xnew * Xnew);
+	}
+    
     void printVals() {
     	Serial.print("distance: "); Serial.print(distance);
     	Serial.print(" angle: "); Serial.print(angle);

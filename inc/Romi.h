@@ -17,7 +17,10 @@
 #define WAIT_NONBLOCKING_SANE_MS(ms, state) if (!nonBlockingDelay(ms)) { \
 					GO_HANDLE(state); \
          			 break; \
-       				 }        				 
+       				 }  
+						
+#define BREAK_AND_GO(st) GO_HANDLE(st); \
+						 break;					      				 
 
 enum ROMI_TASKS {
   FIRST_STARTING_TASK,
@@ -29,6 +32,7 @@ enum ROMI_STATES {
   NON_BLOCKING_DELAY_STATE,
   FIND_LINE,
   TURN_ROMI,
+  TURN_ROMI_STATE,
   JOIN_LINE,
   CHECK_LINE_STATE,
   SETTLING_LINE_STATE,
@@ -39,6 +43,7 @@ enum ROMI_STATES {
   STOP_MOTOR_STATE,
   READ_MOTOR_SPEED,
   ADJUST_MOTOR_SPEED,
+  RETURN_HOME,
 };
 
 extern uint8_t current_state;
