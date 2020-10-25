@@ -41,10 +41,10 @@ int turning_angle {0};
 /* Define all used instances for
    non-blocking millis functions */
 void lineSensingTask(void);
-taskInsert lineSensingTaskIns(lineSensingTask, 20);
+taskInsert lineSensingTaskIns(lineSensingTask, 25);
 
 void motorHandleTask(void);
-taskInsert motorHandleTaskIns(motorHandleTask, 15);
+taskInsert motorHandleTaskIns(motorHandleTask, 35);
 
 // start Romi from origin point
 kinematics knm(0, 0);
@@ -62,82 +62,51 @@ void lineSensingTask(void) {
     leftMotorInstance.motorControl(pidForLeft.updateValue(M_SPEED - sMPower.left_motor_power, leftMotorInstance.readMotorSpeed(&count_e0)) / 5.0);
     rightMotorInstance.motorControl(pidForRight.updateValue(M_SPEED - sMPower.right_motor_power, rightMotorInstance.readMotorSpeed(&count_e1)) / 5.0);
 
-    Serial.print("on-line left motor speed: ");
-    Serial.print(sMPower.left_motor_power);
-    Serial.print(" - on-line left motor speed: ");
-    Serial.println(sMPower.right_motor_power);
-
-  } else {
-    Serial.println("line else-state");
-    //Follow the line with smooth motor speed
-    //float motor_speed = pidForLineFollowing.updateValue(50, 1/*readMotorSpeedTask()*/);
-    //smartMotorControl(motor_speed, motor_speed);
   }
-  GO_HANDLE(ON_LINE_STATE);
 }
 
 bool motorTurning(float degree) {
   static boolean isAngleEnteredFirst = true;
+  static float target_angle = 0;
   static float angle_start_point = 0;
   float system_angle = knm.get_angle();
 
   if (isAngleEnteredFirst) {
     isAngleEnteredFirst = false;
     angle_start_point = system_angle;
+    target_angle = angle_start_point + degree;
   }
 
-  float target_angle = angle_start_point + degree;
+  Serial.print("angle Start Point: "); Serial.print(angle_start_point);
+  Serial.print(" - target angle: "); Serial.print(target_angle);
+  Serial.print(" - system angle: "); Serial.println(system_angle);
 
-  if ((degree > 0) && (system_angle > 0)) {
+  if (((degree > 0) && (system_angle > 0)) || ((degree > 0) && (system_angle < 0))) {
     if (system_angle < target_angle)
     {
-      Serial.print("state1 ");
+      Serial.println("state1............................ ");
       left_motor_speed = M_SPEED;
       right_motor_speed = -M_SPEED;
-      motorHandleTaskIns.callMyTask();
-      return true;
     } else {
       isAngleEnteredFirst = true;
       return false;
     }
-  } else if ((degree < 0) && (system_angle > 0)) {
+  } else if (((degree < 0) && (system_angle > 0)) || ((degree < 0) && (system_angle < 0))) {
     if (system_angle > target_angle)
     {
-      Serial.print("state2 ");
+      Serial.println("state2............................ ");
       left_motor_speed = -M_SPEED;
       right_motor_speed = M_SPEED;
-      motorHandleTaskIns.callMyTask();
-      return true;
-    } else {
-      isAngleEnteredFirst = true;
-      return false;
-    }
-  } else if ((degree > 0) && (system_angle < 0)) {
-    if (system_angle < target_angle)
-    {
-      Serial.print("state3 ");
-      left_motor_speed = M_SPEED;
-      right_motor_speed = -M_SPEED;
-      motorHandleTaskIns.callMyTask();
-      return true;
-    } else {
-      isAngleEnteredFirst = true;
-      return false;
-    }
-
-  } else if ((degree < 0) && (system_angle < 0)) {
-    if (system_angle > target_angle)
-    {
-      Serial.print("state4 ");
-      left_motor_speed = -M_SPEED;
-      right_motor_speed = M_SPEED;
-      motorHandleTaskIns.callMyTask();
-      return true;
     } else {
       isAngleEnteredFirst = true;
       return false;
     }
   }
+
+  Serial.print("left Motor speed: "); Serial.print(left_motor_speed);
+  Serial.print(" - right motor speed: "); Serial.print(right_motor_speed);
+  motorHandleTaskIns.callMyTask();
+  return true;
 }
 
 void motorHandleTask() {
