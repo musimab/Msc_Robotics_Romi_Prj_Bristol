@@ -30,6 +30,8 @@ public:
 	
 	void motorControl(int motor_power)
 	{
+		/* if client enter higher speeds, assign it 
+		   max permissible speed */
 		if (abs(motor_power) > 25 ) {
 			//Serial.print("non-valid values have been entered!");
 			if(motor_power < 0)

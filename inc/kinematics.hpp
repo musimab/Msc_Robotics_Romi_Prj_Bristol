@@ -46,10 +46,12 @@ class kinematics {
       	return (angle);
 	}
     
+    //To measure two distance, before reset the value
     void resetDistanceFrom() {
     	distanceFrom = 0;
 	}
-    
+	
+    //Measure between two distance
     float getDistanceFrom() {
      distanceFrom += dis_diff;
      return distanceFrom;

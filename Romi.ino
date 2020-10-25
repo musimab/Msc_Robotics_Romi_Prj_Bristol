@@ -19,6 +19,9 @@
 
 #define M_SPEED 20
 
+/* Romi tasks */
+ROMI_TASKS romi_task {FIRST_STARTING_TASK};
+
 /* Motor instances */
 myMotor<uint8_t> leftMotorInstance(L_DIR_PIN, L_PWM_PIN);
 myMotor<uint8_t> rightMotorInstance(R_DIR_PIN, R_PWM_PIN);
@@ -54,6 +57,8 @@ static float angle_start_point = {0};
 
 uint16_t count_turning {0};
 
+float home_distance = {0};
+
 void lineSensingTask(void) {
   /* if the obtained values are higher than
      the determined threshold, we are on line
@@ -82,6 +87,19 @@ void motorHandleTask() {
   rightMotorInstance.motorControl(pidForRight.updateValue(right_motor_speed, rightMotorInstance.readMotorSpeed(&count_e1)));
 }
 
+/* this function designed to understand which
+   task is handling */
+void getRomiTask() {
+  if (count_turning == 3) {
+    if ( turning_angle == 90) {
+      romi_task = FIRST_STARTING_TASK;
+    } else if (turning_angle == -90) {
+      romi_task = SECOND_STARTING_TASK;
+    }
+
+  }
+}
+
 void setup() {
   bsp_ctor();
   lineSensorIns.setTreshold(LINE_TRESHOLD);
@@ -93,8 +111,6 @@ void setup() {
 
   GO_HANDLE(IDLE_STATE); // start with handling IDLE state
 }
-
-float home_distance = {0};
 
 void loop() {
   taskInsert::executeTasks();
@@ -114,10 +130,20 @@ void loop() {
           // give a sound with buzzer
           Serial.println("online!!!");
           knm.resetDistanceFrom();
-
-          if (count_turning == 7) {
-            GO_HANDLE(SETTLING_LINE_STATE);
-          }  else {
+          //if our romi encounter a gap go settling state
+          if (romi_task == FIRST_STARTING_TASK) {
+            if (count_turning == 7) {
+              GO_HANDLE(SETTLING_LINE_STATE);
+            } else {
+              GO_HANDLE(ON_LINE_STATE);
+            }
+          } else if (romi_task == SECOND_STARTING_TASK) {
+            if (count_turning == 12) {
+              GO_HANDLE(SETTLING_LINE_STATE);
+            } else {
+              GO_HANDLE(ON_LINE_STATE);
+            }
+          } else {
             GO_HANDLE(ON_LINE_STATE);
           }
 
@@ -141,10 +167,14 @@ void loop() {
           if (knm.getDistanceFrom() > 10) {
             leftMotorInstance.motorControl(0);
             rightMotorInstance.motorControl(0);
-            if (count_turning == 10) {
-              turning_angle = -90;
-            } else {
-              turning_angle = 90;
+            if (romi_task == FIRST_STARTING_TASK) {
+              if (count_turning == 10) {
+                turning_angle = -90;
+              } else {
+                turning_angle = 90;
+              }
+            } else if (romi_task == FIRST_STARTING_TASK) {
+
             }
             GO_HANDLE(FIND_LINE);
           }
@@ -176,6 +206,9 @@ void loop() {
             leftMotorInstance.motorControl(0);
             rightMotorInstance.motorControl(0);
             count_turning++;
+            //Understand which task is handled now
+            if ( count_turning == 3)
+              getRomiTask();
             BREAK_AND_GO(CHECK_LINE_STATE);
           }
         } else if (((turning_angle < 0) && (system_angle > 0)) || ((turning_angle < 0) && (system_angle < 0))) {
@@ -188,11 +221,15 @@ void loop() {
             leftMotorInstance.motorControl(0);
             rightMotorInstance.motorControl(0);
             count_turning++;
+            //Understand which task is handled now
+            if ( count_turning == 3)
+              getRomiTask();
             BREAK_AND_GO(CHECK_LINE_STATE);
           }
         }
 
         motorHandleTaskIns.callMyTask();
+
         GO_HANDLE(TURN_ROMI_STATE);
         break;
       }
@@ -202,22 +239,47 @@ void loop() {
           WAIT_NONBLOCKING_SANE_MS(500, CHECK_LINE_STATE);
           GO_HANDLE(SETTLING_LINE_STATE);
         } else {
-          if (count_turning >= 5 && count_turning < 7 || count_turning >= 10) {
-            if (count_turning == 5) {
+          if (romi_task == FIRST_STARTING_TASK) {
+            if (count_turning >= 5 && count_turning < 7 || count_turning >= 10) {
+              if (count_turning == 5) {
+                turning_angle = 90;
+                GO_HANDLE(FIND_LINE);
+              } else if (count_turning == 6) {
+                count_turning++;
+                GO_HANDLE(READ_LINE_SENSOR);
+              } else if (count_turning >= 10) {
+                knm.resetDistanceFrom();
+                home_distance = knm.homeDistance();
+                GO_HANDLE(RETURN_HOME);
+              }
+            }  else {
+              turning_angle = -90;
+              GO_HANDLE(FIND_LINE);
+            }
+          } else if (romi_task == SECOND_STARTING_TASK) {
+            if ( count_turning == 4) {
               turning_angle = 90;
               GO_HANDLE(FIND_LINE);
-            } else if (count_turning == 6) {
+            } else if ( count_turning == 5) {
+              turning_angle = 180;
+              GO_HANDLE(FIND_LINE);
+            } else if ( count_turning == 10) {
+              turning_angle = 90;
+              GO_HANDLE(FIND_LINE);
+            } else if ( count_turning == 11) {
               count_turning++;
               GO_HANDLE(READ_LINE_SENSOR);
-            } else if (count_turning >= 10) {
+            } else if (count_turning == 16) {
               knm.resetDistanceFrom();
               home_distance = knm.homeDistance();
               GO_HANDLE(RETURN_HOME);
             }
-          }  else {
-            turning_angle = -90;
-            GO_HANDLE(FIND_LINE);
+            else {
+              turning_angle = -90;
+              GO_HANDLE(FIND_LINE);
+            }
           }
+
         }
         break;
       }
@@ -249,7 +311,7 @@ void loop() {
     case RETURN_HOME : {
         Serial.print("home Distance: "); Serial.print(home_distance);
         Serial.print(" - distance from: "); Serial.print(knm.getDistanceFrom());
-        if ((home_distance + 700) > knm.getDistanceFrom()) {
+        if ((home_distance + 800) > knm.getDistanceFrom()) {
           left_motor_speed = M_SPEED;
           right_motor_speed = M_SPEED;
           motorHandleTaskIns.callMyTask();
@@ -257,7 +319,6 @@ void loop() {
         } else {
           GO_HANDLE(STOP_MOTOR_STATE);
         }
-
         break;
       }
 
