@@ -20,6 +20,11 @@
        				 }        				 
 
 enum ROMI_TASKS {
+  FIRST_STARTING_TASK,
+  SECOND_STARTING_TASK,
+};
+
+enum ROMI_STATES {
   IDLE_STATE,
   NON_BLOCKING_DELAY_STATE,
   FIND_LINE,

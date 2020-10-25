@@ -167,7 +167,7 @@ ISR( PCINT0_vect ) {
 
 boolean nonBlockingDelay(unsigned long dly) {
 
-    static unsigned long delay_last_timestamp = millis();
+    static unsigned long delay_last_timestamp = 0;
     static boolean is_entered_first = true;
 
     if (is_entered_first) {

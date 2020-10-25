@@ -59,8 +59,8 @@ void lineSensingTask(void) {
     //if our robot on the right or left of the line, set it on the midst
     lineSensorIns.calculateMotorSpeed(sMPower);
 
-    leftMotorInstance.motorControl(pidForLeft.updateValue(M_SPEED + 10 - sMPower.left_motor_power, leftMotorInstance.readMotorSpeed(&count_e0)) / 8.0);
-    rightMotorInstance.motorControl(pidForRight.updateValue(M_SPEED + 10 - sMPower.right_motor_power, rightMotorInstance.readMotorSpeed(&count_e1)) / 8.0);
+    leftMotorInstance.motorControl(pidForLeft.updateValue(M_SPEED - sMPower.left_motor_power, leftMotorInstance.readMotorSpeed(&count_e0)) / 5.0);
+    rightMotorInstance.motorControl(pidForRight.updateValue(M_SPEED - sMPower.right_motor_power, rightMotorInstance.readMotorSpeed(&count_e1)) / 5.0);
 
     Serial.print("on-line left motor speed: ");
     Serial.print(sMPower.left_motor_power);
@@ -68,6 +68,7 @@ void lineSensingTask(void) {
     Serial.println(sMPower.right_motor_power);
 
   } else {
+    Serial.println("line else-state");
     //Follow the line with smooth motor speed
     //float motor_speed = pidForLineFollowing.updateValue(50, 1/*readMotorSpeedTask()*/);
     //smartMotorControl(motor_speed, motor_speed);
@@ -183,6 +184,7 @@ void loop() {
           knm.resetDistanceFrom();
           GO_HANDLE(ON_LINE_STATE);
         } else {
+          Serial.println("read line else -state");
           left_motor_speed = M_SPEED;
           right_motor_speed = M_SPEED;
           motorHandleTaskIns.callMyTask();
@@ -191,11 +193,13 @@ void loop() {
       }
 
     case ON_LINE_STATE: {
+        Serial.println("online-state");
         if (lineSensorIns.isOnLine())
         {
           GO_HANDLE(ON_LINE_STATE);
         } else {
-          Serial.println("offline!!!");
+          //Off-line state
+          //Let system go beyond the line for the settling
           if (knm.getDistanceFrom() > 12.5) {
             leftMotorInstance.motorControl(0);
             rightMotorInstance.motorControl(0);
@@ -203,13 +207,12 @@ void loop() {
             GO_HANDLE(FIND_LINE);
           }
         }
-        //lineSensingTaskIns.callMyTask();
-
         break;
       }
 
     case FIND_LINE: {
-        WAIT_NONBLOCKING_SANE_MS(1400, FIND_LINE);
+        Serial.println("find line-state");
+        WAIT_NONBLOCKING_SANE_MS(500, FIND_LINE);
         GO_HANDLE(TURN_ROMI);
         break;
       }
@@ -240,18 +243,26 @@ void loop() {
       }
 
     case SETTLING_LINE_STATE: {
+        Serial.println("settling line-state");
         if (lineSensorIns.isOnLine()) {
           lineSensingTaskIns.callMyTask();
           GO_HANDLE(SETTLING_LINE_STATE);
         } else {
+          leftMotorInstance.motorControl(0);
+          rightMotorInstance.motorControl(0);
+          knm.resetDistanceFrom();
           turning_angle = 90;
-          GO_HANDLE(FIND_LINE);
+          GO_HANDLE(FOLLOW_LINE_STATE);
         }
         break;
       }
 
     case FOLLOW_LINE_STATE: {
-
+        Serial.println("FOLLOW_LINE_STATE-state");
+        WAIT_NONBLOCKING_SANE_MS(100, FOLLOW_LINE_STATE);
+        leftMotorInstance.motorControl(-15);
+        rightMotorInstance.motorControl(-15);
+        GO_HANDLE(ON_LINE_STATE);
         break;
       }
 
