@@ -1,7 +1,7 @@
 /* ROMI PROJECT
-  University Of Bristol
-  Robotics System
-  Furkan Cam
+   University Of Bristol
+   Robotics System
+   Furkan Cam
 */
 
 #include "inc/bsp.h"
@@ -76,13 +76,6 @@ void lineSensingTask(void) {
 }
 
 void motorHandleTask() {
-
-  /*if( knm.get_angle() > 0.2) {
-    left_motor_speed -= 1;
-    } else {
-    left_motor_speed += 1;
-    }*/
-
   leftMotorInstance.motorControl(pidForLeft.updateValue(left_motor_speed, leftMotorInstance.readMotorSpeed(&count_e0)));
   rightMotorInstance.motorControl(pidForRight.updateValue(right_motor_speed, rightMotorInstance.readMotorSpeed(&count_e1)));
 }
@@ -124,10 +117,9 @@ void loop() {
 
     case READ_LINE_SENSOR: {
         if (lineSensorIns.isOnLine()) {
-          /* we have to know is the robot on line or just
+          /* we have to know is the robot on-line or just
             entiring a line from the right side, if so we
             should turn robot right first */
-          // give a sound with buzzer
           Serial.println("online!!!");
           knm.resetDistanceFrom();
           //if our romi encounter a gap go settling state
@@ -146,7 +138,6 @@ void loop() {
           } else {
             GO_HANDLE(ON_LINE_STATE);
           }
-
         } else {
           Serial.println("read line else -state");
           left_motor_speed = M_SPEED;
@@ -160,21 +151,28 @@ void loop() {
         Serial.println("online-state");
         if (lineSensorIns.isOnLine())
         {
+          /* If Robot enters the on-line state
+             wait until its overpassing
+          */
           GO_HANDLE(ON_LINE_STATE);
+
         } else {
-          //Off-line state
-          //Let system go beyond the line for the settling
+          /* Robot overpassed the line, we need to find
+             new line turning 90 degree around it. However,
+             firstly let robot go little further (10mm) to ease
+             its turning process.
+          */
           if (knm.getDistanceFrom() > 10) {
             leftMotorInstance.motorControl(0);
             rightMotorInstance.motorControl(0);
             if (romi_task == FIRST_STARTING_TASK) {
               if (count_turning == 10) {
+                // If we are on our 10th turning turn left instead right
                 turning_angle = -90;
               } else {
+                // In other cases, turn right for the first checking of line
                 turning_angle = 90;
               }
-            } else if (romi_task == FIRST_STARTING_TASK) {
-
             }
             GO_HANDLE(FIND_LINE);
           }
