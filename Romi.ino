@@ -70,6 +70,7 @@ uint16_t count_turning {0};
 
 float home_distance = {0};
 
+//This task will be called in a periodic time.
 void lineSensingTask(void) {
   /* if the obtained values are higher than
      the determined threshold, we are on line
@@ -86,13 +87,15 @@ void lineSensingTask(void) {
   }
 }
 
+//This task will be called in a periodic time.
 void motorHandleTask() {
+  //Update the motor speeds by using PID feedback control to let them drive in a stable speed.
   leftMotorInstance.motorControl(pidForLeft.updateValue(left_motor_speed, leftMotorInstance.readMotorSpeed(&count_e0)));
   rightMotorInstance.motorControl(pidForRight.updateValue(right_motor_speed, rightMotorInstance.readMotorSpeed(&count_e1)));
 }
 
-/* this function is designed to understand which
-   task is handling. */
+/* this function is designed to understand which spesific
+   task is handling. (first starting point or seccond ?) */
 void getRomiTask() {
   if (count_turning == 3) {
     if ( turning_angle == 90) {
