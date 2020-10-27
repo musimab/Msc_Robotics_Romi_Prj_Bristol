@@ -57,7 +57,8 @@ float PID::updateValue(float demand, float measurement) {
 	float err_diff = error - last_error;
 	
 	integral_error += error;
-
+	
+	/* To eliminate un stabilize problem, we should use this guard.*/
 	if (integral_error > 100)
     	integral_error = 100;
   	else if (integral_error < -100)
@@ -71,7 +72,8 @@ float PID::updateValue(float demand, float measurement) {
 	//Add the three components to get the total output 
 	//output signal -> total pid output value
 	output_signal = Kp_output + Kd_output + Ki_output;
-
+	
+	//motor voltage should not over this determined value.
 	if(output_signal > 125)
 	   output_signal = 125;
 	else if(output_signal < -125)

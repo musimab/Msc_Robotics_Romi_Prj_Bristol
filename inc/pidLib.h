@@ -15,9 +15,6 @@ class PID {
     float Ki_output = 0;
     float Kd_output = 0;
 
-    /* Private functions and variables are defined here. These functions / variables cannot be accessed from outside the class.
-       For example, if we try to set the value of Kp in the file "Romi.h", we will get an error (Try it out!)
-    */
   private:
 
     //Control gains

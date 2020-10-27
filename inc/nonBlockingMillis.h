@@ -10,6 +10,8 @@
 
 class taskInsert {
   private:
+  	//we will use a function pointer to be able to implement
+  	//them as a parameters. 
     typedef void(*taskHandler)(void);
     unsigned long freqOfTask{ 0 };
     unsigned long last_timestamp{ 0 };
@@ -32,7 +34,7 @@ class taskInsert {
 
     // This function is to get the current system working time
     static void executeTasks(void) {
-      // Get how much time has passed right now.
+      // Get how much time has passed right now for all instance.
       time_now = millis();
     }
 

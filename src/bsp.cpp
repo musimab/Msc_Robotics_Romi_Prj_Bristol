@@ -26,7 +26,7 @@ volatile int aLastState;
 
 void bsp_ctor(void) {
   Serial.begin(9600);
-
+  pinMode(BUZZER, OUTPUT); // Set buzzer - pin 9 as an output 
   /* interrupt configurations */
   attachInterrupt(digitalPinToInterrupt(E1_A_PIN), encoderInterrupt, CHANGE);
   setupEncoder0();

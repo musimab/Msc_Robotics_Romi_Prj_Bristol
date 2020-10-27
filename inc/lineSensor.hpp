@@ -9,6 +9,8 @@
 #define LINE_CENTRE_PIN A3
 #define LINE_RIGHT_PIN A2
 
+/* This struct will be used while calculating 
+   the motor power for two wheels. */
 struct sensorMotorPowers {
   float left_motor_power;
   float right_motor_power;
@@ -70,6 +72,7 @@ class lineSensor {
       cal_r_value = r_value / (float)cal_rate;
     }
 
+	//substact the offset value which is obtained from a set of sample
     void readLeftCalibratedLineVal(void) {
       left_sensor_val = analogRead(left_pin);
       left_sensor_val -= cal_l_value;
@@ -93,6 +96,7 @@ class lineSensor {
     }
 
     void calculateMotorSpeed(sensorMotorPowers & myPowers) {
+      //Calculate the motor power while the sensor on the line (labsheet 4)
       readCalibratedLineVals();
       float total_val = left_sensor_val + centre_sensor_val + right_sensor_val;
       myPowers.left_motor_power  = MAX_MOTOR_SPEED * ((left_sensor_val - right_sensor_val) / total_val);

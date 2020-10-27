@@ -3,17 +3,7 @@
 
 #define MAX_MOTOR_SPEED 100
 
-#define LED_1 6
-#define LED_2 7
-#define LED_3 8
-
-enum {
-  STOP_MOTORS,
-  MOVE_FORWARD,
-  MOVE_BACKWARD,
-  TURN_RIGHT,
-  TURN_LEFT,
-};
+#define BUZZER 6
 
 /* These definitions are about the encoder */
 extern volatile long count_e1; // used by encoder to count the rotation
