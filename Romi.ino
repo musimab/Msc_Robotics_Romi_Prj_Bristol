@@ -15,7 +15,7 @@
 /* we have created with default pins */
 
 #define KP_VAL 1   // increase response time, but it'll increase oscillation also
-#define KI_VAL 1 // minimise the total error 
+#define KI_VAL 1   // minimise the total error 
 #define KD_VAL 1   // if there is a huge changing
 
 #define M_SPEED 20
@@ -50,8 +50,8 @@ int turning_angle {0};
    The second parameter is the period of the function in in millisecond.
    We will use two non-blocking function for handling our tasks, one of them
    will implement the line following task, while other one will be
-   resposible for the motor driving,and the former and latter will implement
-   every their tasks in every 15ms.
+   resposible for the motor driving, and the former and latter will be implemented
+   every 45ms and 15ms respectively.
 */
 void lineSensingTask(void);
 taskInsert lineSensingTaskIns(lineSensingTask, 45);
@@ -79,7 +79,7 @@ void lineSensingTask(void) {
   if (lineSensorIns.isLeftOnline() || lineSensorIns.isRightOnline()) {
     //if our robot on the right or left of the line, set it on the midst
     lineSensorIns.calculateMotorSpeed(sMPower);
-    
+
     leftMotorInstance.motorControl(pidForLeft.updateValue(M_SPEED - sMPower.left_motor_power, leftMotorInstance.readMotorSpeed(&count_e0)) / 3.0);
     rightMotorInstance.motorControl(pidForRight.updateValue(M_SPEED - sMPower.right_motor_power, rightMotorInstance.readMotorSpeed(&count_e1)) / 3.0);
 
@@ -105,7 +105,7 @@ void getRomiTask() {
 }
 
 void setup() {
-  //Start board support packege which is spesific for our mcu
+  //Start board support packege which is spesific for our MCU
   bsp_ctor();
   //Assign default for our sensor
   lineSensorIns.setTreshold(LINE_TRESHOLD);
@@ -130,17 +130,19 @@ void setup() {
 }
 
 void loop() {
-  /* This static function will be called for updating
-     the time. It will be the same for all instances.
-  */
+  /* This Class spesific static function will be called for updating
+     the time. It will be the same for all instances. */
   taskInsert::executeTasks();
 
   // Update the kinematic variables using the encoder counting rates.
   knm.kinematicupdate(count_e0, count_e1);
 
   switch (current_state) {
-    case IDLE_STATE: {
 
+    case IDLE_STATE: {
+        /*Start the state machine with the idle state (do nothing here)
+          GO_HANDLE macro and the others are defined in the Romi.h file.
+          They are used to navigate the flow of control. */
         GO_HANDLE(READ_LINE_SENSOR);
         break;
       }
